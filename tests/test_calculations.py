@@ -1,6 +1,11 @@
 import pytest
 
-from app.calculation import Calculation, CalculationFactory, calculate, evaluate_expression
+from app.calculation import (
+    Calculation,
+    CalculationFactory,
+    calculate,
+    evaluate_expression,
+)
 
 
 @pytest.mark.parametrize(
@@ -84,7 +89,9 @@ def test_calculation_factory_rejects_invalid_operations(operation):
         (27, "root", 3, 3),
     ],
 )
-def test_calculate_dispatches_aliases(first_number, operation, second_number, expected_result):
+def test_calculate_dispatches_aliases(
+    first_number, operation, second_number, expected_result
+):
     assert calculate(first_number, operation, second_number) == expected_result
 
 

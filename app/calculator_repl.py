@@ -1,6 +1,7 @@
 """Enhanced Calculator command loop and CLI entry point."""
 
 import logging
+import sys
 
 from colorama import Fore, init
 
@@ -30,13 +31,24 @@ OPERATION_COLORS = {
 }
 
 
+def _display_symbol(operation_name: str) -> str:
+    """Return an operation symbol supported by the active console encoding."""
+    symbol = OPERATION_SYMBOLS[operation_name]
+    encoding = sys.stdout.encoding or "utf-8"
+    try:
+        symbol.encode(encoding)
+    except UnicodeEncodeError:
+        return operation_name
+    return symbol
+
+
 def _print_help() -> None:
     """Display the commands and arithmetic operations available in the REPL."""
     print("Commands: help, history, clear, undo, redo, save, load, exit")
     print(
         "Operations: "
         + ", ".join(
-            f"{name} ({OPERATION_SYMBOLS[name]})" for name in OPERATION_ALIASES
+            f"{name} ({_display_symbol(name)})" for name in OPERATION_ALIASES
         )
     )
     print(
@@ -59,7 +71,8 @@ def _print_history(history: tuple[Calculation, ...]) -> None:
         result = calculation.calculate()
         if calculation.operation == "root":
             expression = (
-                f"{calculation.second_number}√({calculation.first_number})"
+                f"{calculation.second_number}{_display_symbol('root')}"
+                f"({calculation.first_number})"
             )
         else:
             expression = (
@@ -103,7 +116,7 @@ def run_interactive(
     print("----------------------------------------------------------------")
 
     for operation_name, aliases in OPERATION_ALIASES.items():
-        symbol = OPERATION_SYMBOLS[operation_name]
+        symbol = _display_symbol(operation_name)
         print(
             OPERATION_COLORS[operation_name]
             + f"For {operation_name}, enter: {', '.join(aliases[:-1])}, or {symbol}"

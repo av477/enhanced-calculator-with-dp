@@ -18,5 +18,5 @@ VALID_OPERATIONS = {
 }
 INVALID_OPERATION_MESSAGE = (
     "Invalid operation. Please choose one of: add (+), subtract (-), "
-    "multiply (*), divide (/), power (^), or root (√)."
+    "multiply (*), divide (/), power (^), or root (nthroot)."
 )

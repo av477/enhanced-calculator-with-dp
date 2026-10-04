@@ -1,7 +1,7 @@
 name: Python Tests
 
-# Trigger the workflow on every push to the repository
-on: [push]
+# Run the coverage gate for both branch updates and proposed changes.
+on: [push, pull_request]
 
 jobs:
   test:
