@@ -7,7 +7,11 @@ name = "interactive-calculator"
 version = "0.1.0"
 description = "A command-line calculator with basic arithmetic operations."
 requires-python = ">=3.11"
-dependencies = ["colorama>=0.4.6"]
+dependencies = [
+    "colorama>=0.4.6",
+    "pandas>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "pytest-cov>=5.0.0"]

@@ -1,12 +1,12 @@
 """Observer interfaces and built-in calculation event observers."""
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from app.calculation import Calculation
+from app.history import CalculationHistory
 
 
 @dataclass(frozen=True)
@@ -46,22 +46,10 @@ class LoggingObserver:
 
 
 class AutoSaveHistoryObserver:
-    """Persist the latest calculation history as JSON after every state change."""
+    """Persist the latest calculation history as CSV after every state change."""
 
     def __init__(self, file_path: str | Path) -> None:
         self._file_path = Path(file_path)
 
     def update(self, event: CalculationEvent) -> None:
-        records = [
-            {
-                "first_number": calculation.first_number,
-                "operation": calculation.operation,
-                "second_number": calculation.second_number,
-                "result": calculation.calculate(),
-            }
-            for calculation in event.history
-        ]
-        self._file_path.write_text(
-            json.dumps(records, indent=2, allow_nan=False) + "\n",
-            encoding="utf-8",
-        )
+        CalculationHistory(event.history).save_csv(self._file_path)
