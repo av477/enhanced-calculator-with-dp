@@ -1,35 +1,30 @@
 # Enhanced Calculator
 
-A Python command-line calculator with a read-evaluate-print loop (REPL), six arithmetic operations, and session-only calculation history. Its code is organized into focused modules under `app/`.
+A Python command-line calculator with a continuous read-evaluate-print loop
+(REPL), six arithmetic operations, undo/redo, and pandas-backed CSV history.
+The implementation is split into focused modules and demonstrates Strategy,
+Factory, Observer, Memento, and Facade patterns.
 
 ## Features
 
 - Addition, subtraction, multiplication, division, power, and nth root
-- Operation names, aliases, and symbols:
-   - Addition: `add`, `sum`, `+`
-   - Subtraction: `subtract`, `minus`, `-`
-   - Multiplication: `multiply`, `times`, `*`
-   - Division: `divide`, `div`, `/`
-   - Power: `power`, `pow`, `^`
-   - Root: `root`, `nthroot`, `√` (enter the radicand, then the root degree)
-- REPL commands: `help`, `history`, and `exit` (`quit` and `q` also exit)
-- Undo and redo of successful calculations
-- Observer notifications, logging, and optional JSON history auto-save
-- Strategy-based operations instantiated through an operation factory
-- A `Calculator` facade coordinating operations, observers, history, and undo/redo
-- Input validation for invalid operations, malformed numbers, and non-finite values
-- Clear division-by-zero errors
-- Calculation instances created through `CalculationFactory`
-- Unit tests with 100% statement and branch coverage enforced in CI
+- Named operations, aliases, and symbols
+- Persistent CSV history with startup loading and optional automatic saving
+- `help`, `history`, `clear`, `undo`, `redo`, `save`, `load`, and exit commands
+- Input validation and clear errors for invalid input and unsupported results
+- Logging and observer notifications for calculator state changes
+- Pytest suite with 100% statement and branch coverage enforced in CI
 
 ## Requirements
 
 - Python 3.11 or newer
 - pip
+- Runtime packages: `colorama`, `pandas`, and `python-dotenv`
 
 ## Setup
 
-Run these commands from the project root. A virtual environment keeps the project dependencies separate from other Python installations.
+Run the following from the repository root. The virtual environment keeps the
+project's Python packages separate from other installations.
 
 ### Windows PowerShell
 
@@ -39,7 +34,8 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-If PowerShell blocks activation scripts, allow script execution for the current terminal session, then activate the environment:
+If script activation is blocked, enable it for the current PowerShell process
+and activate the environment again:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
@@ -54,17 +50,18 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-The editable installation installs the runtime dependency and the optional development dependencies (`pytest` and `pytest-cov`).
+The editable install includes the runtime packages and the optional
+development packages (`pytest` and `pytest-cov`).
 
-## Run
+## Run the calculator
 
-Start the calculator from the project root:
+From the repository root, start the REPL with:
 
 ```console
 python -m app.calculator_repl
 ```
 
-Choose an operation, then enter two finite numbers when prompted. For root, enter the radicand followed by the root degree:
+Choose an operation and enter its two operands when prompted:
 
 ```text
 Choose an operation: add
@@ -77,33 +74,66 @@ Choose an operation: exit
 Goodbye!
 ```
 
-Enter `help` to list commands, operations, and aliases. Enter `history` to display successful calculations. Use `undo` and `redo` to move between history states; a new calculation clears the redo state. History remains session-only unless an auto-save observer is configured. Invalid input displays an error and returns to the operation prompt. Division by zero is rejected without adding a result to history.
+For root, enter the radicand first and the degree second: choosing `root` and
+entering `27` then `3` returns `3`. Negative radicands require an odd integer
+degree. Zero-degree roots and non-real results are rejected.
 
-## Design patterns
+## Operations and aliases
 
-- **Strategy and Factory:** `OperationFactory` creates an interchangeable arithmetic strategy for the selected operation. `CalculationFactory` normalizes user aliases and creates calculation requests.
-- **Observer:** `Calculator` notifies registered observers after calculations, undo, and redo. `LoggingObserver` logs events; `AutoSaveHistoryObserver` writes the current history as JSON.
-- **Memento:** `CalculationHistory` creates immutable `CalculatorMemento` snapshots. The `Calculator` facade retains undo and redo snapshots.
-- **Facade:** `Calculator` provides one interface to execution, history, observers, undo, and redo.
+| Operation | Accepted inputs | Operand order |
+| --- | --- | --- |
+| Addition | `add`, `sum`, `+` | first + second |
+| Subtraction | `subtract`, `minus`, `-` | first - second |
+| Multiplication | `multiply`, `times`, `*` | first * second |
+| Division | `divide`, `div`, `/` | first / second |
+| Power | `power`, `pow`, `^` | first raised to second |
+| Nth root | `root`, `nthroot`, `√` | root of first with degree second |
 
-To enable automatic history saving, provide an observer with a destination path:
+Inputs must be finite numbers. Division by zero, invalid operations, malformed
+numbers, and results outside the supported real-number domain are reported as
+errors; failed calculations are not added to history.
 
-```python
-from app.calculator import Calculator
-from app.calculator_observers import AutoSaveHistoryObserver, LoggingObserver
+## REPL commands
 
-calculator = Calculator(
-    observers=[
-        LoggingObserver(),
-        AutoSaveHistoryObserver("calculator_history.json"),
-    ]
-)
-calculator.calculate(2, "power", 3)
-```
+| Command | Behavior |
+| --- | --- |
+| `help` | Show commands, operations, and aliases |
+| `history` | Display the current calculation history |
+| `clear` | Clear history; the change can be undone |
+| `undo` | Restore the prior history state, if available |
+| `redo` | Reapply an undone state, if available |
+| `save` | Write history to the configured CSV path |
+| `load` | Replace history from the configured CSV file |
+| `exit`, `quit`, `q` | Exit the REPL |
 
-## Use the Calculation API
+`load` resets the undo and redo stacks. A new calculation clears the redo
+stack. Missing or invalid CSV files produce an error; the REPL remains
+available so the user can continue or exit.
 
-Calculation instances normalize operation names, aliases, and symbols before execution:
+## Configuration
+
+Settings can be provided as process environment variables or in a `.env` file
+in the working directory. Process environment variables take precedence over
+`.env`. The checked-in `.env.example` lists the defaults; copy it to `.env` to
+customize local settings. `.env` is ignored by Git.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CALCULATOR_HISTORY_FILE` | `calculator_history.csv` | History CSV path; must have a `.csv` extension |
+| `CALCULATOR_AUTOSAVE_HISTORY` | `true` | Automatically persist state changes; accepts `true`/`false`, `1`/`0`, `yes`/`no`, and `on`/`off` |
+| `CALCULATOR_LOG_LEVEL` | `INFO` | One of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, or `DEBUG` |
+
+The configured CSV is loaded at startup when it exists. When auto-save is
+enabled, successful calculations and history changes (clear, undo, redo, and
+load) are saved automatically. Disabling auto-save leaves manual `save` and
+`load` available. Invalid settings are reported before the REPL starts.
+
+CSV history stores the first operand, canonical operation name, and second
+operand. Results are recalculated when history is displayed.
+
+## Python API
+
+Use the calculation factory for a single calculation:
 
 ```python
 from app.calculation import CalculationFactory
@@ -112,28 +142,64 @@ calculation = CalculationFactory.create_calculation(12, "*", 3)
 print(calculation.calculate())  # 36
 ```
 
-The `calculate(first_number, operation, second_number)` helper provides the same calculation behavior without retaining a calculation object.
+The `calculate(first_number, operation, second_number)` helper provides the
+same dispatch behavior without retaining a `Calculation` object. To use the
+facade with observers and state history:
 
-## Project Layout
+```python
+from app.calculator import Calculator
+from app.calculator_observers import AutoSaveHistoryObserver, LoggingObserver
+
+calculator = Calculator(
+    observers=[
+        LoggingObserver(),
+        AutoSaveHistoryObserver("calculator_history.csv"),
+    ]
+)
+print(calculator.calculate(2, "power", 3))
+calculator.undo()
+calculator.redo()
+```
+
+## Design and project layout
+
+- **Strategy and Factory:** `OperationFactory` selects an operation strategy;
+  `CalculationFactory` normalizes operation aliases and creates calculations.
+- **Observer:** `Calculator` broadcasts state changes to registered observers.
+  The built-in observers log events and automatically persist CSV history.
+- **Memento:** immutable `CalculatorMemento` snapshots provide undo and redo.
+- **Facade:** `Calculator` coordinates operations, history, observers, and
+  state restoration.
 
 ```text
 app/
-   calculator_repl.py       REPL and command-line entry point
-   calculation.py           Calculation objects, factory, and helpers
-   calculator_config.py     Operation names, aliases, and symbols
-   calculator_memento.py    Immutable calculator state snapshots
-   calculator_observers.py  Observer protocol, logging, and JSON auto-save
-   calculator.py            Facade with operation execution and undo/redo
-   exceptions.py            Calculator-specific exceptions
-   history.py               Session calculation history
-   input_validators.py      Numeric input validation
-   operations.py            Arithmetic functions
-tests/                      Pytest unit and CLI integration tests
+    calculator.py             Facade and undo/redo coordination
+    calculator_config.py      Operation aliases and symbols
+    calculator_memento.py     Immutable history snapshots
+    calculator_observers.py   Observer protocol, logging, and CSV auto-save
+    calculator_repl.py        REPL and command-line entry point
+    calculation.py            Calculation objects and helpers
+    config.py                 Validated environment/dotenv settings
+    exceptions.py             Domain-specific exceptions
+    history.py                DataFrame-backed history and CSV import/export
+    input_validators.py       Numeric input validation
+    operations.py             Arithmetic strategies and factory
+tests/
+    test_calculations.py
+    test_calculator_config.py
+    test_calculator_facade.py
+    test_calculator_memento.py
+    test_calculator_repl.py
+    test_config.py
+    test_exceptions.py
+    test_history.py
+    test_input_validators.py
+    test_operations.py
 ```
 
-## Run Tests
+## Tests and coverage
 
-Run all unit and integration tests:
+Run all tests:
 
 ```console
 python -m pytest
@@ -145,8 +211,14 @@ Measure statement and branch coverage and require both to reach 100%:
 python -m pytest --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=100
 ```
 
-Coverage exclusions should be reserved for code that cannot meaningfully be exercised by a test. `# pragma: no cover` excludes the marked line from the report and can exclude an entire conditional clause. `# pragma: no branch` marks a deliberately partial branch as intentional. Prefer adding tests for reachable paths; this project currently needs no coverage exclusions.
+Coverage exclusions should be reserved for code that cannot meaningfully be
+exercised. `# pragma: no cover` excludes a marked line (and may exclude a
+conditional clause); `# pragma: no branch` identifies an intentionally partial
+branch. Do not exclude reachable code just to raise the coverage percentage:
+add tests for those paths. This project currently has no coverage exclusions.
 
-## Continuous Integration
+## Continuous integration
 
-The GitHub Actions workflow at `.github/workflows/python-tests.yml` installs the project with development dependencies, runs pytest with branch coverage enabled, and fails if total coverage is below 100%.
+The GitHub Actions workflow at `.github/workflows/python-tests.yml` installs
+the project and development dependencies, runs pytest with branch coverage,
+and fails if total coverage is below 100%.

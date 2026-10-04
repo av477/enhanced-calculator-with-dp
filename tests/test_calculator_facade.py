@@ -1,10 +1,11 @@
-import json
 import logging
 
 import pytest
 
+from app.calculation import CalculationFactory
 from app.calculator import Calculator
 from app.calculator_observers import AutoSaveHistoryObserver, LoggingObserver
+from app.history import CalculationHistory
 from app.operations import (
     AdditionStrategy,
     DivisionStrategy,
@@ -48,6 +49,30 @@ def test_undo_redo_restore_history_and_new_calculation_discards_redo():
     assert [item.operation for item in calculator.history] == ["add", "subtract"]
 
 
+def test_clear_history_can_be_undone_and_redone():
+    calculator = Calculator()
+    calculator.calculate(2, "+", 3)
+
+    calculator.clear_history()
+    assert calculator.history == ()
+    assert calculator.undo() is True
+    assert len(calculator.history) == 1
+    assert calculator.redo() is True
+    assert calculator.history == ()
+
+
+def test_load_history_replaces_state_and_clears_undo_redo():
+    calculator = Calculator()
+    calculator.calculate(2, "+", 3)
+    replacement = CalculationFactory.create_calculation(9, "^", 2)
+
+    calculator.load_history((replacement,))
+
+    assert calculator.history == (replacement,)
+    assert calculator.undo() is False
+    assert calculator.redo() is False
+
+
 def test_observers_receive_calculation_undo_and_redo_events():
     class RecordingObserver:
         def __init__(self):
@@ -63,6 +88,24 @@ def test_observers_receive_calculation_undo_and_redo_events():
     calculator.redo()
 
     assert observer.actions == [("calculate", 1), ("undo", 0), ("redo", 1)]
+
+
+def test_observer_receives_clear_and_load_events():
+    class RecordingObserver:
+        def __init__(self):
+            self.actions = []
+
+        def update(self, event):
+            self.actions.append(event.action)
+
+    observer = RecordingObserver()
+    calculator = Calculator(observers=(observer,))
+    calculation = CalculationFactory.create_calculation(3, "+", 4)
+    calculator.calculate(3, "+", 4)
+    calculator.clear_history()
+    calculator.load_history((calculation,))
+
+    assert observer.actions == ["calculate", "clear", "load"]
 
 
 def test_observers_can_be_added_and_removed():
@@ -94,23 +137,18 @@ def test_logging_observer_logs_calculation(caplog):
 
 
 def test_autosave_observer_writes_calculations_and_tracks_undo_redo(tmp_path):
-    history_file = tmp_path / "history.json"
+    history_file = tmp_path / "history.csv"
     calculator = Calculator(observers=(AutoSaveHistoryObserver(history_file),))
     calculator.calculate(2, "^", 3)
-    records = json.loads(history_file.read_text(encoding="utf-8"))
-    assert records == [
-        {
-            "first_number": 2,
-            "operation": "power",
-            "second_number": 3,
-            "result": 8,
-        }
+    records = CalculationHistory.from_csv(history_file).get_all()
+    assert [(item.first_number, item.operation, item.second_number) for item in records] == [
+        (2, "power", 3)
     ]
 
     calculator.undo()
-    assert json.loads(history_file.read_text(encoding="utf-8")) == []
+    assert CalculationHistory.from_csv(history_file).get_all() == ()
     calculator.redo()
-    assert json.loads(history_file.read_text(encoding="utf-8")) == records
+    assert CalculationHistory.from_csv(history_file).get_all() == records
 
 
 @pytest.mark.parametrize(
