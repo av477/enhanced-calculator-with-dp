@@ -1,4 +1,4 @@
-"""Professional Calculator command loop and CLI entry point."""
+"""Enhanced Calculator command loop and CLI entry point."""
 
 from colorama import Fore, init
 
@@ -68,7 +68,7 @@ def _print_history(history: tuple[Calculation, ...]) -> None:
 def run_interactive(calculator: Calculator | None = None) -> None:
     """Run the calculator's read-evaluate-print loop."""
     calculator = calculator or Calculator(observers=(LoggingObserver(),))
-    print("-------------------- Professional Calculator --------------------")
+    print("-------------------- Enhanced Calculator --------------------")
     print("Available operations: " + ", ".join(OPERATION_ALIASES))
     print("----------------------------------------------------------------")
 

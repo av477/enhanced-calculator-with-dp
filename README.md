@@ -1,4 +1,4 @@
-# Professional Calculator
+# Enhanced Calculator
 
 A Python command-line calculator with a read-evaluate-print loop (REPL), six arithmetic operations, and session-only calculation history. Its code is organized into focused modules under `app/`.
 

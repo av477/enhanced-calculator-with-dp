@@ -20,7 +20,7 @@ def test_run_interactive_handles_valid_and_invalid_operations(monkeypatch, capsy
 
     captured = capsys.readouterr()
     assert calculate_and_print is True
-    assert "Professional Calculator" in captured.out
+    assert "Enhanced Calculator" in captured.out
     assert "Result: 8.0" in captured.out or "Result: 8" in captured.out
     assert "Cannot divide by zero" in captured.out
 
@@ -147,7 +147,7 @@ def test_cli_module_runs_main(monkeypatch, capsys):
     runpy.run_module("app.calculator_repl", run_name="__main__")
 
     captured = capsys.readouterr()
-    assert "Professional Calculator" in captured.out
+    assert "Enhanced Calculator" in captured.out
     assert "Goodbye!" in captured.out
 
 
@@ -167,5 +167,5 @@ def test_calculator_repl_module_runs_main(monkeypatch, capsys):
     runpy.run_module("app.calculator_repl", run_name="__main__")
 
     captured = capsys.readouterr()
-    assert "Professional Calculator" in captured.out
+    assert "Enhanced Calculator" in captured.out
     assert "Goodbye!" in captured.out
