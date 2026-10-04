@@ -1,6 +1,6 @@
 # Enhanced Calculator
 
-A Python command-line calculator with a read-evaluate-print loop (REPL), six arithmetic operations, and session-only calculation history. Its code is organized into focused modules under `app/`.
+A Python command-line calculator with a read-evaluate-print loop (REPL), six arithmetic operations, and persistent pandas-backed CSV calculation history. Its code is organized into focused modules under `app/`.
 
 ## Features
 
@@ -12,9 +12,9 @@ A Python command-line calculator with a read-evaluate-print loop (REPL), six ari
    - Division: `divide`, `div`, `/`
    - Power: `power`, `pow`, `^`
    - Root: `root`, `nthroot`, `√` (enter the radicand, then the root degree)
-- REPL commands: `help`, `history`, and `exit` (`quit` and `q` also exit)
+- REPL commands: `help`, `history`, `clear`, `undo`, `redo`, `save`, `load`, and `exit` (`quit` and `q` also exit)
 - Undo and redo of successful calculations
-- Observer notifications, logging, and optional JSON history auto-save
+- Observer notifications, logging, and automatic CSV history persistence
 - Strategy-based operations instantiated through an operation factory
 - A `Calculator` facade coordinating operations, observers, history, and undo/redo
 - Input validation for invalid operations, malformed numbers, and non-finite values
@@ -26,6 +26,7 @@ A Python command-line calculator with a read-evaluate-print loop (REPL), six ari
 
 - Python 3.11 or newer
 - pip
+- pandas
 
 ## Setup
 
@@ -64,6 +65,22 @@ Start the calculator from the project root:
 python -m app.calculator_repl
 ```
 
+## Configuration
+
+Settings can be provided through environment variables or a `.env` file in the
+working directory. Process environment variables take precedence over `.env`.
+All settings are validated on startup; invalid values are reported before the
+REPL starts.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CALCULATOR_HISTORY_FILE` | `calculator_history.csv` | CSV path; must end in `.csv` |
+| `CALCULATOR_AUTOSAVE_HISTORY` | `true` | Enable automatic CSV saving (`true`/`false`, `1`/`0`, `yes`/`no`, or `on`/`off`) |
+| `CALCULATOR_LOG_LEVEL` | `INFO` | `CRITICAL`, `ERROR`, `WARNING`, `INFO`, or `DEBUG` |
+
+Copy `.env.example` to `.env` to customize these settings locally. `.env` is
+excluded from version control.
+
 Choose an operation, then enter two finite numbers when prompted. For root, enter the radicand followed by the root degree:
 
 ```text
@@ -77,26 +94,39 @@ Choose an operation: exit
 Goodbye!
 ```
 
-Enter `help` to list commands, operations, and aliases. Enter `history` to display successful calculations. Use `undo` and `redo` to move between history states; a new calculation clears the redo state. History remains session-only unless an auto-save observer is configured. Invalid input displays an error and returns to the operation prompt. Division by zero is rejected without adding a result to history.
+Enter `help` to list commands, operations, and aliases. Enter `history` to display successful calculations. `clear` removes calculations from the current history (and can itself be undone); `undo` and `redo` move between history states. `save` writes to the configured CSV path, and `load` replaces current history from that path. A new calculation clears redo state. The REPL loads the configured CSV from the working directory at startup and automatically saves changes when auto-save is enabled. Invalid input displays an error and returns to the operation prompt. Division by zero is rejected without adding a result to history.
+
+Input validation uses both common error-handling styles: the REPL checks operation names before requesting operands (LBYL), while numeric conversion and CSV file operations attempt the action and handle expected exceptions (EAFP). Errors such as invalid operations, malformed numbers, invalid CSV data, and missing or inaccessible files are reported without terminating the REPL.
 
 ## Design patterns
 
 - **Strategy and Factory:** `OperationFactory` creates an interchangeable arithmetic strategy for the selected operation. `CalculationFactory` normalizes user aliases and creates calculation requests.
-- **Observer:** `Calculator` notifies registered observers after calculations, undo, and redo. `LoggingObserver` logs events; `AutoSaveHistoryObserver` writes the current history as JSON.
+- **Observer:** `Calculator` notifies registered observers after calculations, undo, and redo. `LoggingObserver` logs events; `AutoSaveHistoryObserver` writes the current history as CSV.
 - **Memento:** `CalculationHistory` creates immutable `CalculatorMemento` snapshots. The `Calculator` facade retains undo and redo snapshots.
 - **Facade:** `Calculator` provides one interface to execution, history, observers, undo, and redo.
 
-To enable automatic history saving, provide an observer with a destination path:
+To configure automatic history saving and loading, pass the same CSV path to the history observer and load it when constructing the calculator:
 
 ```python
 from app.calculator import Calculator
+from pathlib import Path
+
 from app.calculator_observers import AutoSaveHistoryObserver, LoggingObserver
+from app.history import CalculationHistory
+
+history_path = Path("calculator_history.csv")
+history = (
+    CalculationHistory.from_csv(history_path).get_all()
+    if history_path.exists()
+    else ()
+)
 
 calculator = Calculator(
     observers=[
         LoggingObserver(),
-        AutoSaveHistoryObserver("calculator_history.json"),
-    ]
+        AutoSaveHistoryObserver(history_path),
+    ],
+    initial_history=history,
 )
 calculator.calculate(2, "power", 3)
 ```
@@ -122,10 +152,10 @@ app/
    calculation.py           Calculation objects, factory, and helpers
    calculator_config.py     Operation names, aliases, and symbols
    calculator_memento.py    Immutable calculator state snapshots
-   calculator_observers.py  Observer protocol, logging, and JSON auto-save
+   calculator_observers.py  Observer protocol, logging, and CSV auto-save
    calculator.py            Facade with operation execution and undo/redo
    exceptions.py            Calculator-specific exceptions
-   history.py               Session calculation history
+   history.py               pandas-backed history and CSV import/export
    input_validators.py      Numeric input validation
    operations.py            Arithmetic functions
 tests/                      Pytest unit and CLI integration tests

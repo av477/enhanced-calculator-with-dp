@@ -14,11 +14,15 @@ class Calculator:
     def __init__(
         self,
         observers: Iterable[CalculationObserver] = (),
+        initial_history: Iterable[Calculation] = (),
     ) -> None:
         self._history = CalculationHistory()
         self._observers = list(observers)
         self._undo_stack: list[CalculatorMemento] = []
         self._redo_stack: list[CalculatorMemento] = []
+        for calculation in initial_history:
+            self._undo_stack.append(self._history.create_memento())
+            self._history.add(calculation)
 
     @property
     def history(self) -> tuple[Calculation, ...]:
@@ -76,6 +80,20 @@ class Calculator:
         self._history.restore(self._redo_stack.pop())
         self._notify(CalculationEvent("redo", self.history))
         return True
+
+    def clear_history(self) -> None:
+        """Clear calculation history and publish the new state."""
+        self._undo_stack.append(self._history.create_memento())
+        self._redo_stack.clear()
+        self._history.restore(CalculatorMemento(()))
+        self._notify(CalculationEvent("clear", self.history))
+
+    def load_history(self, calculations: Iterable[Calculation]) -> None:
+        """Replace history with loaded calculations and reset undo/redo."""
+        self._history.restore(CalculatorMemento(tuple(calculations)))
+        self._undo_stack.clear()
+        self._redo_stack.clear()
+        self._notify(CalculationEvent("load", self.history))
 
     def _notify(self, event: CalculationEvent) -> None:
         for observer in tuple(self._observers):
