@@ -114,8 +114,11 @@ def test_run_interactive_can_disable_csv_autosaving(monkeypatch, capsys, tmp_pat
     assert not history_path.exists()
 
 
-def test_run_interactive_invalid_operation_shows_available_choices(monkeypatch, capsys):
-    responses = iter(["sqrt", "quit"])
+@pytest.mark.parametrize("invalid_operation", ["sqrt", "mod", ""])
+def test_run_interactive_invalid_operation_shows_available_choices(
+    monkeypatch, capsys, invalid_operation
+):
+    responses = iter([invalid_operation, "quit"])
     monkeypatch.setattr("builtins.input", lambda prompt="": next(responses))
 
     from app.calculator_repl import run_interactive
