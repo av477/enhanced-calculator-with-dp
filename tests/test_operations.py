@@ -2,9 +2,6 @@ import pytest
 
 from app.operations import add, divide, multiply, power, root, subtract
 
-# This module tests the primitive arithmetic functions with normal, negative, fractional, and
-# division-by-zero inputs.
-
 @pytest.mark.parametrize(
     ("a", "b", "expected"),
     [
@@ -109,3 +106,20 @@ def test_root_rejects_invalid_degrees(radicand, degree, message):
 def test_root_rejects_non_real_negative_roots(radicand, degree):
     with pytest.raises(ValueError, match="odd integer"):
         root(radicand, degree)
+
+
+@pytest.mark.parametrize(
+    ("operation", "first_number", "second_number", "expected"),
+    [
+        (add, 2, 3, 5),
+        (subtract, 7, 2, 5),
+        (multiply, 4, 3, 12),
+        (divide, 9, 3, 3),
+        (power, 2, 4, 16),
+        (root, 81, 4, 3),
+    ],
+)
+def test_operation_functions_return_expected_results(
+    operation, first_number, second_number, expected
+):
+    assert operation(first_number, second_number) == pytest.approx(expected)

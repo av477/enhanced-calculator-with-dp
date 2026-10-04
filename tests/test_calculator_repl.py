@@ -1,4 +1,5 @@
 import importlib
+import io
 import runpy
 import sys
 
@@ -22,17 +23,11 @@ def test_run_interactive_handles_valid_and_invalid_operations(monkeypatch, capsy
     responses = iter(["add", "5", "3", "divide", "10", "0", "quit"])
     monkeypatch.setattr("builtins.input", lambda prompt="": next(responses))
 
-    calculate_and_print = False
-    try:
-        from app.calculator_repl import run_interactive
+    from app.calculator_repl import run_interactive
 
-        run_interactive()
-        calculate_and_print = True
-    except Exception:
-        pass
+    run_interactive()
 
     captured = capsys.readouterr()
-    assert calculate_and_print is True
     assert "Enhanced Calculator" in captured.out
     assert "Result: 8.0" in captured.out or "Result: 8" in captured.out
     assert "Cannot divide by zero" in captured.out
@@ -134,7 +129,19 @@ def test_run_interactive_invalid_operation_shows_available_choices(monkeypatch, 
     assert "multiply (*)" in captured.out
     assert "divide (/)" in captured.out
     assert "power (^)" in captured.out
-    assert "root (√)" in captured.out
+    assert "root (" in captured.out
+
+
+def test_root_symbol_falls_back_for_non_unicode_consoles(monkeypatch):
+    from app.calculator_repl import _display_symbol
+
+    class Cp1252Stream(io.StringIO):
+        encoding = "cp1252"
+
+    monkeypatch.setattr("app.calculator_repl.sys.stdout", Cp1252Stream())
+
+    assert _display_symbol("root") == "root"
+    assert _display_symbol("add") == "+"
 
 
 def test_run_interactive_power_and_root_show_results_and_history(monkeypatch, capsys):

@@ -16,25 +16,37 @@ class OperationStrategy(Protocol):
 
 @dataclass(frozen=True)
 class AdditionStrategy:
+    """Apply addition to a pair of operands."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return the sum of the operands."""
         return first_number + second_number
 
 
 @dataclass(frozen=True)
 class SubtractionStrategy:
+    """Apply subtraction to a pair of operands."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return the first operand minus the second."""
         return first_number - second_number
 
 
 @dataclass(frozen=True)
 class MultiplicationStrategy:
+    """Apply multiplication to a pair of operands."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return the product of the operands."""
         return first_number * second_number
 
 
 @dataclass(frozen=True)
 class DivisionStrategy:
+    """Apply division to a pair of operands."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return the first operand divided by the second."""
         if second_number == 0:
             raise DivisionByZeroError("Cannot divide by zero.")
         return first_number / second_number
@@ -42,7 +54,10 @@ class DivisionStrategy:
 
 @dataclass(frozen=True)
 class PowerStrategy:
+    """Raise the first operand to the second operand's power."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return a real-valued power result."""
         try:
             result = first_number**second_number
         except OverflowError as exc:
@@ -57,7 +72,10 @@ class PowerStrategy:
 
 @dataclass(frozen=True)
 class RootStrategy:
+    """Take the second operand's root of the first operand."""
+
     def execute(self, first_number: float, second_number: float) -> float:
+        """Return a real-valued root result."""
         if second_number == 0:
             raise DivisionByZeroError("Cannot take a zero-degree root.")
         if first_number == 0 and second_number < 0:
@@ -123,23 +141,3 @@ def power(first_number: float, second_number: float) -> float:
 def root(first_number: float, second_number: float) -> float:
     """Return the second-number-degree root of the first number."""
     return RootStrategy().execute(first_number, second_number)
-
-
-OPERATIONS = {
-    "add": add,
-    "subtract": subtract,
-    "multiply": multiply,
-    "divide": divide,
-    "power": power,
-    "root": root,
-}
-
-
-OPERATIONS = {
-    "add": add,
-    "subtract": subtract,
-    "multiply": multiply,
-    "divide": divide,
-    "power": power,
-    "root": root,
-}

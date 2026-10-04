@@ -1,4 +1,4 @@
-"""Session history for successful calculations."""
+"""DataFrame-backed calculation history with CSV and memento support."""
 
 import math
 from pathlib import Path
@@ -16,22 +16,12 @@ class CalculationHistory:
     COLUMNS = ("first_number", "operation", "second_number")
 
     def __init__(self, calculations: Iterable[Calculation] = ()) -> None:
-        self._dataframe = pd.DataFrame(columns=self.COLUMNS)
-        for calculation in calculations:
-            self.add(calculation)
+        """Initialize history from an optional collection of calculations."""
+        self._dataframe = self._dataframe_from_calculations(calculations)
 
     def add(self, calculation: Calculation) -> None:
         """Append a successful calculation to history."""
-        row = pd.DataFrame(
-            [
-                {
-                    "first_number": calculation.first_number,
-                    "operation": calculation.operation,
-                    "second_number": calculation.second_number,
-                }
-            ],
-            columns=self.COLUMNS,
-        )
+        row = self._dataframe_from_calculations((calculation,))
         self._dataframe = pd.concat([self._dataframe, row], ignore_index=True)
 
     def get_all(self) -> tuple[Calculation, ...]:
@@ -94,14 +84,19 @@ class CalculationHistory:
 
     def restore(self, memento: CalculatorMemento) -> None:
         """Replace the current history with a previously captured snapshot."""
-        self._dataframe = pd.DataFrame(
-            [
-                {
-                    "first_number": calculation.first_number,
-                    "operation": calculation.operation,
-                    "second_number": calculation.second_number,
-                }
-                for calculation in memento.calculations
-            ],
-            columns=self.COLUMNS,
-        )
+        self._dataframe = self._dataframe_from_calculations(memento.calculations)
+
+    @classmethod
+    def _dataframe_from_calculations(
+        cls, calculations: Iterable[Calculation]
+    ) -> pd.DataFrame:
+        """Build the canonical history table from calculation objects."""
+        records = [
+            {
+                "first_number": calculation.first_number,
+                "operation": calculation.operation,
+                "second_number": calculation.second_number,
+            }
+            for calculation in calculations
+        ]
+        return pd.DataFrame.from_records(records, columns=cls.COLUMNS)
